@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>MobilityHub — Corporate Relocation & Visa Tracker</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <script>window.lucide || document.write('<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"><\/script>')</script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col md:flex-row pb-20 md:pb-0">
+
+  <!-- Desktop Sidebar -->
+  <aside class="hidden md:flex md:w-64 bg-slate-900 border-r border-slate-800 p-6 flex-col justify-between shrink-0">
+    <div>
+      <div class="flex items-center gap-3 mb-8">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20">
+          <i data-lucide="globe" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-base tracking-tight leading-tight">MobilityHub</h1>
+          <span class="text-xs text-blue-400 font-medium">Enterprise Relo & Tax</span>
+        </div>
+      </div>
+
+      <nav class="space-y-1.5" id="desktop-nav">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium bg-blue-600/15 text-blue-400 border border-blue-500/30">
+          <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+        </button>
+        <button onclick="switchTab('visas')" id="tab-visas" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="file-check-2" class="w-4 h-4"></i> Work Permits & Visas
+        </button>
+        <button onclick="switchTab('tax')" id="tab-tax" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="calculator" class="w-4 h-4"></i> 183-Day Tax Tracker
+        </button>
+        <button onclick="switchTab('expenses')" id="tab-expenses" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="receipt" class="w-4 h-4"></i> Moving Allowances
+        </button>
+      </nav>
+    </div>
+
+    <div class="pt-6 border-t border-slate-800 space-y-3">
+      <button onclick="openModal('expat-modal')" class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-2.5 px-4 rounded-lg shadow transition">
+        <i data-lucide="user-plus" class="w-4 h-4"></i> New Relocation
+      </button>
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span class="text-xs text-slate-400">SQLite API: <strong class="text-slate-200">Connected</strong></span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-1 p-5 md:p-8 overflow-y-auto">
+    <header class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 border-b border-slate-800 gap-4">
+      <div>
+        <h2 id="view-title" class="text-2xl font-bold tracking-tight">Executive Mobility Dashboard</h2>
+        <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Expatriate tax tracking, work permit renewals, and moving expense allowances.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button onclick="openModal('travel-modal')" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-xs px-3 py-2 rounded-lg border border-slate-700 font-medium transition">
+          <i data-lucide="plane" class="w-3.5 h-3.5 text-blue-400"></i> + Log Travel Days
+        </button>
+        <button onclick="openModal('expense-modal')" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-xs px-3 py-2 rounded-lg border border-slate-700 font-medium transition">
+          <i data-lucide="dollar-sign" class="w-3.5 h-3.5 text-emerald-400"></i> + File Expense
+        </button>
+        <button onclick="exportCSV()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-xs px-3 py-2 rounded-lg border border-slate-700 font-medium transition">
+          <i data-lucide="download" class="w-3.5 h-3.5 text-slate-300"></i> Export CSV
+        </button>
+      </div>
+    </header>
+
+    <div id="api-error" class="hidden mt-4 p-3 rounded-lg border border-rose-500/40 bg-rose-500/10 text-rose-300 text-xs flex items-center justify-between gap-3">
+      <span id="api-error-msg"></span>
+      <button onclick="fetchData()" class="px-3 py-1.5 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-semibold">Retry</button>
+    </div>
+    <div id="view-container" class="mt-6 space-y-6"><p class="text-sm text-slate-400">Loading expatriate records…</p></div>
+  </main>
+
+  <!-- Mobile Bottom Navigation (for iOS/Android App viewports) -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur border-t border-slate-800 flex justify-around py-2.5 z-40">
+    <button onclick="switchTab('dashboard')" data-mtab="dashboard" class="mnav flex flex-col items-center gap-1 text-xs text-blue-400">
+      <i data-lucide="layout-dashboard" class="w-5 h-5"></i><span>Home</span>
+    </button>
+    <button onclick="switchTab('visas')" data-mtab="visas" class="mnav flex flex-col items-center gap-1 text-xs text-slate-400">
+      <i data-lucide="file-check-2" class="w-5 h-5"></i><span>Visas</span>
+    </button>
+    <button onclick="switchTab('tax')" data-mtab="tax" class="mnav flex flex-col items-center gap-1 text-xs text-slate-400">
+      <i data-lucide="calculator" class="w-5 h-5"></i><span>183d Tax</span>
+    </button>
+    <button onclick="switchTab('expenses')" data-mtab="expenses" class="mnav flex flex-col items-center gap-1 text-xs text-slate-400">
+      <i data-lucide="receipt" class="w-5 h-5"></i><span>Allowances</span>
+    </button>
+    <button onclick="openModal('expat-modal')" class="flex flex-col items-center gap-1 text-xs text-emerald-400">
+      <i data-lucide="plus-circle" class="w-5 h-5"></i><span>Add</span>
+    </button>
+  </nav>
+
+  <!-- MODAL 1: Add Expatriate -->
+  <div id="expat-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-lg">Initiate Employee Relocation</h3>
+        <button onclick="closeModal('expat-modal')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form onsubmit="submitNewExpat(event)" class="space-y-3 text-sm">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-400">Full Name *</label>
+            <input id="ex-name" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" placeholder="Marcus Vance">
+          </div>
+          <div>
+            <label class="text-xs text-slate-400">Email *</label>
+            <input id="ex-email" type="email" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" placeholder="m.vance@corp.com">
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="text-xs text-slate-400">Origin Country *</label>
+            <input id="ex-origin" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" placeholder="Canada">
+          </div>
+          <div>
+            <label class="text-xs text-slate-400">Host Country *</label>
+            <input id="ex-host" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" placeholder="Singapore">
+          </div>
+          <div>
+            <label class="text-xs text-slate-400">Host City *</label>
+            <input id="ex-city" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" placeholder="Singapore">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-400">Department *</label>
+            <input id="ex-dept" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" placeholder="AI Research">
+          </div>
+          <div>
+            <label class="text-xs text-slate-400">Job Title *</label>
+            <input id="ex-title" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" placeholder="Staff Engineer">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800">
+          <div>
+            <label class="text-xs text-slate-400">Work Permit Type *</label>
+            <input id="ex-permit" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" placeholder="Employment Pass (EP)">
+          </div>
+          <div>
+            <label class="text-xs text-slate-400">Permit Expiry Date *</label>
+            <input id="ex-expiry" type="date" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+          </div>
+        </div>
+        <div class="grid grid-cols-4 gap-2 pt-2 border-t border-slate-800">
+          <div>
+            <label class="text-[11px] text-slate-400">Housing ($)</label>
+            <input id="ex-bh" type="number" value="18000" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs">
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400">Flights ($)</label>
+            <input id="ex-bf" type="number" value="4500" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs">
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400">Shipping ($)</label>
+            <input id="ex-bs" type="number" value="9000" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs">
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400">Settling ($)</label>
+            <input id="ex-bset" type="number" value="3500" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs">
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-4">
+          <button type="button" onclick="closeModal('expat-modal')" class="px-4 py-2 rounded-lg bg-slate-800 text-xs">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs">Save Relocation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Log Travel Days (183-Day Tracker) -->
+  <div id="travel-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-lg">Log Physical Presence Stay</h3>
+        <button onclick="closeModal('travel-modal')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form onsubmit="submitTravelLog(event)" class="space-y-3 text-sm">
+        <div>
+          <label class="text-xs text-slate-400">Select Expatriate *</label>
+          <select id="tr-expat" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2"></select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Stay Country (Match Host Country for 183d Rule) *</label>
+          <input id="tr-country" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" placeholder="United Kingdom">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-400">Entry Date *</label>
+            <input id="tr-entry" type="date" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+          </div>
+          <div>
+            <label class="text-xs text-slate-400">Exit Date *</label>
+            <input id="tr-exit" type="date" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Purpose</label>
+          <input id="tr-purpose" value="Host Country Assignment" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+        </div>
+        <div class="flex justify-end gap-2 pt-3">
+          <button type="button" onclick="closeModal('travel-modal')" class="px-4 py-2 rounded-lg bg-slate-800 text-xs">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs">Log Stay & Recalculate Tax</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Submit Moving Expense Claim -->
+  <div id="expense-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-lg">File Moving Expense Claim</h3>
+        <button onclick="closeModal('expense-modal')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form onsubmit="submitExpenseClaim(event)" class="space-y-3 text-sm">
+        <div>
+          <label class="text-xs text-slate-400">Expatriate *</label>
+          <select id="exp-expat" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2"></select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Expense Description *</label>
+          <input id="exp-title" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" placeholder="20ft Household Shipping Container">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-400">Allowance Pool *</label>
+            <select id="exp-cat" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+              <option value="TEMPORARY_HOUSING">Temporary Housing</option>
+              <option value="FLIGHT_TRAVEL">Flights & Travel</option>
+              <option value="CONTAINER_SHIPPING">Container Shipping</option>
+              <option value="SETTLING_IN">Settling-In Stipend</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-slate-400">Vendor *</label>
+            <input id="exp-vendor" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" placeholder="DHL Global Forwarding">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-400">Currency</label>
+            <select id="exp-curr" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+              <option value="USD">USD ($)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="SGD">SGD (S$)</option>
+              <option value="INR">INR (₹)</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-slate-400">Amount (USD Equiv.) *</label>
+            <input id="exp-amount" type="number" required class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2" placeholder="3200">
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-3">
+          <button type="button" onclick="closeModal('expense-modal')" class="px-4 py-2 rounded-lg bg-slate-800 text-xs">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs">Submit Claim</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 4: Visa Renewal SLA Checklist -->
+  <div id="visa-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-lg">Work Permit Renewal Workflow</h3>
+        <button onclick="closeModal('visa-modal')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form onsubmit="submitVisaRenewal(event)" class="space-y-3 text-sm">
+        <input type="hidden" id="vm-id">
+        <div class="space-y-2 bg-slate-800/60 p-3.5 rounded-xl border border-slate-700">
+          <label class="flex items-center gap-2.5 cursor-pointer">
+            <input type="checkbox" id="vm-cos" class="rounded bg-slate-900">
+            <span>1. Certificate of Sponsorship (CoS) Assigned</span>
+          </label>
+          <label class="flex items-center gap-2.5 cursor-pointer">
+            <input type="checkbox" id="vm-med" class="rounded bg-slate-900">
+            <span>2. Medical & Police Clearances Verified</span>
+          </label>
+          <label class="flex items-center gap-2.5 cursor-pointer">
+            <input type="checkbox" id="vm-bio" class="rounded bg-slate-900">
+            <span>3. Biometrics Appointment Completed</span>
+          </label>
+          <label class="flex items-center gap-2.5 cursor-pointer">
+            <input type="checkbox" id="vm-gov" class="rounded bg-slate-900">
+            <span>4. Filed with Host Country Immigration</span>
+          </label>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-400">Workflow Stage</label>
+            <select id="vm-status" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+              <option value="CRITICAL">CRITICAL</option>
+              <option value="EXPIRING_SOON">EXPIRING_SOON</option>
+              <option value="IN_RENEWAL">IN_RENEWAL</option>
+              <option value="VALID">VALID (Renewed)</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-slate-400">New Expiry Date</label>
+            <input type="date" id="vm-expiry" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Immigration Counsel Notes</label>
+          <textarea id="vm-notes" rows="2" class="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2"></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-3">
+          <button type="button" onclick="closeModal('visa-modal')" class="px-4 py-2 rounded-lg bg-slate-800 text-xs">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs">Update Permit SLA</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "/api";
+    let activeTab = "dashboard";
+    let expats = [];
+
+    function esc(v) {
+      return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    function refreshIcons() {
+      try { if (window.lucide && lucide.createIcons) lucide.createIcons(); } catch (e) { console.warn('Icon render skipped', e); }
+    }
+    function showError(msg) {
+      document.getElementById('api-error-msg').innerText = msg;
+      document.getElementById('api-error').classList.remove('hidden');
+    }
+    function clearError() { document.getElementById('api-error').classList.add('hidden'); }
+
+    // All API calls go through here so failures are always surfaced to the user.
+    async function api(path, options) {
+      let res;
+      try {
+        res = await fetch(`${API_BASE}${path}`, options);
+      } catch (err) {
+        throw new Error('Cannot reach the server. Check that the backend is running.');
+      }
+      let data = null;
+      try { data = await res.json(); } catch (err) { /* non-JSON body */ }
+      if (!res.ok) throw new Error((data && data.error) || `Request failed (${res.status})`);
+      if (data === null) throw new Error('Server returned an unexpected (non-JSON) response.');
+      return data;
+    }
+    function send(method, path, body) {
+      return api(path, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    }
+    // Normalise records so the views never crash on missing arrays.
+    function normalise(list) {
+      return list.map(e => ({ ...e, workPermits: e.workPermits || [], travelRecords: e.travelRecords || [], expenseClaims: e.expenseClaims || [] }));
+    }
+    function hostDaysOf(e) {
+      return e.travelRecords.filter(t => String(t.country).toLowerCase() === String(e.hostCountry).toLowerCase()).reduce((a, b) => a + Number(b.durationDays || 0), 0);
+    }
+    async function guarded(fn) {
+      try { await fn(); clearError(); } catch (err) { showError(err.message); }
+    }
+
+    async function fetchData() {
+      try {
+        expats = normalise(await api('/expatriates'));
+        clearError();
+        populateExpatDropdowns();
+        renderActiveView();
+      } catch (err) {
+        showError(err.message);
+        if (!expats.length) document.getElementById('view-container').innerHTML = '<p class="text-sm text-slate-400">No data to display.</p>';
+      }
+    }
+
+    function populateExpatDropdowns() {
+      const opts = expats.map(e => `<option value="${esc(e.id)}" data-host="${esc(e.hostCountry)}">${esc(e.fullName)} (${esc(e.hostCountry)})</option>`).join('');
+      document.getElementById('tr-expat').innerHTML = opts;
+      document.getElementById('exp-expat').innerHTML = opts;
+      if (expats[0]) document.getElementById('tr-country').value = expats[0].hostCountry;
+      document.getElementById('tr-expat').onchange = (ev) => {
+        const sel = ev.target.options[ev.target.selectedIndex];
+        document.getElementById('tr-country').value = sel.getAttribute('data-host') || '';
+      };
+    }
+
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    function openVisaModal(permitId) {
+      let found = null;
+      expats.forEach(e => e.workPermits.forEach(p => { if (p.id === permitId) found = p; }));
+      if (!found) return;
+      document.getElementById('vm-id').value = found.id;
+      document.getElementById('vm-cos').checked = found.cosAssigned;
+      document.getElementById('vm-med').checked = found.medicalCompleted;
+      document.getElementById('vm-bio').checked = found.biometricsDone;
+      document.getElementById('vm-gov').checked = found.submittedToGovt;
+      document.getElementById('vm-status').value = ['CRITICAL','EXPIRING_SOON','IN_RENEWAL','VALID'].includes(found.status) ? found.status : 'IN_RENEWAL';
+      document.getElementById('vm-expiry').value = new Date(found.expiryDate).toISOString().split('T')[0];
+      document.getElementById('vm-notes').value = found.counselNotes || '';
+      openModal('visa-modal');
+    }
+
+    async function submitNewExpat(e) {
+      e.preventDefault();
+      await guarded(async () => {
+        await send('POST', '/expatriates', {
+          fullName: document.getElementById('ex-name').value,
+          email: document.getElementById('ex-email').value,
+          originCountry: document.getElementById('ex-origin').value,
+          hostCountry: document.getElementById('ex-host').value,
+          city: document.getElementById('ex-city').value,
+          department: document.getElementById('ex-dept').value,
+          jobTitle: document.getElementById('ex-title').value,
+          permitType: document.getElementById('ex-permit').value,
+          expiryDate: document.getElementById('ex-expiry').value,
+          budgetHousing: document.getElementById('ex-bh').value,
+          budgetFlights: document.getElementById('ex-bf').value,
+          budgetShipping: document.getElementById('ex-bs').value,
+          budgetSettling: document.getElementById('ex-bset').value
+        });
+        closeModal('expat-modal');
+        e.target.reset();
+      });
+      fetchData();
+    }
+
+    async function submitTravelLog(e) {
+      e.preventDefault();
+      if (document.getElementById('tr-exit').value < document.getElementById('tr-entry').value) { showError('Exit date cannot be before entry date.'); return; }
+      await guarded(async () => {
+        await send('POST', '/travel-logs', {
+          expatriateId: document.getElementById('tr-expat').value,
+          country: document.getElementById('tr-country').value,
+          entryDate: document.getElementById('tr-entry').value,
+          exitDate: document.getElementById('tr-exit').value,
+          purpose: document.getElementById('tr-purpose').value
+        });
+        closeModal('travel-modal');
+        e.target.reset();
+      });
+      fetchData();
+    }
+
+    async function submitExpenseClaim(e) {
+      e.preventDefault();
+      const amt = Number(document.getElementById('exp-amount').value);
+      await guarded(async () => {
+        await send('POST', '/expenses', {
+          expatriateId: document.getElementById('exp-expat').value,
+          title: document.getElementById('exp-title').value,
+          category: document.getElementById('exp-cat').value,
+          vendor: document.getElementById('exp-vendor').value,
+          currency: document.getElementById('exp-curr').value,
+          amount: amt,
+          amountInUSD: amt
+        });
+        closeModal('expense-modal');
+        e.target.reset();
+      });
+      fetchData();
+    }
+
+    async function submitVisaRenewal(e) {
+      e.preventDefault();
+      const id = document.getElementById('vm-id').value;
+      await guarded(async () => {
+        await send('PATCH', `/visas/${id}/renewal-workflow`, {
+          cosAssigned: document.getElementById('vm-cos').checked,
+          medicalCompleted: document.getElementById('vm-med').checked,
+          biometricsDone: document.getElementById('vm-bio').checked,
+          submittedToGovt: document.getElementById('vm-gov').checked,
+          status: document.getElementById('vm-status').value,
+          newExpiryDate: document.getElementById('vm-expiry').value,
+          counselNotes: document.getElementById('vm-notes').value
+        });
+        closeModal('visa-modal');
+      });
+      fetchData();
+    }
+
+    async function updateExpenseStatus(id, status) {
+      await guarded(() => send('PATCH', `/expenses/${id}/status`, { status }));
+      fetchData();
+    }
+
+    function switchTab(tab) {
+      activeTab = tab;
+      document.querySelectorAll('#desktop-nav button').forEach(btn => {
+        btn.className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60";
+      });
+      const activeBtn = document.getElementById(`tab-${tab}`);
+      if (activeBtn) activeBtn.className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium bg-blue-600/15 text-blue-400 border border-blue-500/30";
+      document.querySelectorAll('.mnav').forEach(b => {
+        b.className = 'mnav flex flex-col items-center gap-1 text-xs ' + (b.dataset.mtab === tab ? 'text-blue-400' : 'text-slate-400');
+      });
+      renderActiveView();
+    }
+
+    function renderActiveView() {
+      const container = document.getElementById('view-container');
+      if (activeTab === "dashboard") renderDashboard(container);
+      else if (activeTab === "visas") renderVisas(container);
+      else if (activeTab === "tax") renderTax(container);
+      else if (activeTab === "expenses") renderExpenses(container);
+      refreshIcons();
+    }
+
+    function renderDashboard(container) {
+      document.getElementById('view-title').innerText = "Executive Mobility Dashboard";
+      let criticalVisas = 0, totalBudget = 0, totalSpent = 0, taxAlerts = 0;
+
+      expats.forEach(e => {
+        totalBudget += Number(e.budgetHousing) + Number(e.budgetFlights) + Number(e.budgetShipping) + Number(e.budgetSettling);
+        e.expenseClaims.forEach(c => {
+          if (c.status === "APPROVED" || c.status === "REIMBURSED") totalSpent += Number(c.amountInUSD);
+        });
+        e.workPermits.forEach(p => {
+          const days = Math.ceil((new Date(p.expiryDate) - new Date()) / 86400000);
+          if (days <= 60 && p.status !== "VALID") criticalVisas++;
+        });
+        const hostDays = hostDaysOf(e);
+        if (hostDays >= 183) taxAlerts++;
+      });
+
+      container.innerHTML = `
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-slate-900 p-5 rounded-xl border border-slate-800">
+            <span class="text-xs font-medium text-slate-400 uppercase">Active Relocations</span>
+            <div class="text-3xl font-bold mt-2">${expats.length}</div>
+            <p class="text-xs text-blue-400 mt-1">Multinational corridors</p>
+          </div>
+          <div class="bg-slate-900 p-5 rounded-xl border border-slate-800">
+            <span class="text-xs font-medium text-slate-400 uppercase">Visas Requiring Action</span>
+            <div class="text-3xl font-bold mt-2 text-rose-400">${criticalVisas}</div>
+            <p class="text-xs text-rose-400/80 mt-1">Expiring within 60 days</p>
+          </div>
+          <div class="bg-slate-900 p-5 rounded-xl border border-slate-800">
+            <span class="text-xs font-medium text-slate-400 uppercase">183-Day Tax Triggers</span>
+            <div class="text-3xl font-bold mt-2 text-amber-400">${taxAlerts}</div>
+            <p class="text-xs text-amber-400/80 mt-1">Shadow payroll required</p>
+          </div>
+          <div class="bg-slate-900 p-5 rounded-xl border border-slate-800">
+            <span class="text-xs font-medium text-slate-400 uppercase">Allowance Utilized</span>
+            <div class="text-3xl font-bold mt-2 text-emerald-400">$${totalSpent.toLocaleString()}</div>
+            <p class="text-xs text-slate-400 mt-1">Cap: $${totalBudget.toLocaleString()}</p>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 rounded-xl border border-slate-800 p-6">
+          <h3 class="font-bold text-base mb-4">Global Expatriate Roster</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="text-xs text-slate-400 uppercase border-b border-slate-800">
+                <tr>
+                  <th class="py-3 px-3">Expatriate</th>
+                  <th class="py-3 px-3">Corridor</th>
+                  <th class="py-3 px-3">Permit Expiry</th>
+                  <th class="py-3 px-3">183d Tax Counter</th>
+                  <th class="py-3 px-3">Relo Budget Left</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/70">
+                ${expats.map(e => {
+                  const p = e.workPermits[0] || {};
+                  const days = p.expiryDate ? Math.ceil((new Date(p.expiryDate) - new Date()) / 86400000) : null;
+                  const hostDays = hostDaysOf(e);
+                  const cap = Number(e.budgetHousing) + Number(e.budgetFlights) + Number(e.budgetShipping) + Number(e.budgetSettling);
+                  const spent = e.expenseClaims.filter(c => c.status === "APPROVED" || c.status === "REIMBURSED").reduce((a,b)=>a+Number(b.amountInUSD), 0);
+                  return `
+                    <tr class="hover:bg-slate-800/40">
+                      <td class="py-3.5 px-3 font-semibold">${esc(e.fullName)}<span class="block text-xs text-slate-400 font-normal">${esc(e.jobTitle)} &bull; ${esc(e.department)}</span></td>
+                      <td class="py-3.5 px-3 text-xs">${esc(e.originCountry)} &rarr; <strong class="text-blue-400">${esc(e.city)}, ${esc(e.hostCountry)}</strong></td>
+                      <td class="py-3.5 px-3 font-semibold ${days <= 30 ? 'text-rose-400' : (days <= 90 ? 'text-amber-400' : 'text-emerald-400')}">${days !== null ? `${days}d (${esc(p.status)})` : 'N/A'}</td>
+                      <td class="py-3.5 px-3"><span class="px-2 py-0.5 rounded text-xs font-bold ${hostDays >= 183 ? 'bg-rose-500/20 text-rose-400' : 'bg-blue-500/20 text-blue-400'}">${hostDays} / 183 days</span></td>
+                      <td class="py-3.5 px-3 font-bold text-slate-200">$${(cap - spent).toLocaleString()}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderVisas(container) {
+      document.getElementById('view-title').innerText = "Work Permit & Visa Renewal Tracker";
+      container.innerHTML = `<div class="space-y-4">` + expats.map(e => e.workPermits.map(p => {
+        const days = Math.ceil((new Date(p.expiryDate) - new Date()) / 86400000);
+        const steps = [
+          { label: "CoS Assigned", done: p.cosAssigned },
+          { label: "Medicals", done: p.medicalCompleted },
+          { label: "Biometrics", done: p.biometricsDone },
+          { label: "Govt Filing", done: p.submittedToGovt }
+        ];
+        return `
+          <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl flex flex-col lg:flex-row justify-between gap-6">
+            <div class="space-y-2">
+              <div class="flex items-center gap-3">
+                <span class="font-bold text-lg">${esc(e.fullName)}</span>
+                <span class="text-xs px-2.5 py-0.5 rounded font-bold ${days <= 30 ? 'bg-rose-500/20 text-rose-400' : (days <= 60 ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400')}">${esc(p.status)} &bull; ${days} Days Left</span>
+              </div>
+              <p class="text-xs text-slate-400">${esc(p.permitType)} &bull; Permit #: <span class="font-mono text-slate-200">${esc(p.permitNumber)}</span> &bull; Host: ${esc(p.issuingCountry)}</p>
+              <div class="flex flex-wrap gap-2 pt-2">
+                ${steps.map(s => `<span class="text-xs px-2.5 py-1 rounded-md border ${s.done ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-slate-800 border-slate-700 text-slate-400'}">${s.done ? '✓' : '○'} ${s.label}</span>`).join('')}
+              </div>
+              <p class="text-xs text-slate-400 pt-1"><strong>Counsel Note:</strong> ${esc(p.counselNotes || 'None')}</p>
+            </div>
+            <div class="flex flex-row lg:flex-col justify-between items-end shrink-0 gap-3">
+              <div class="text-right">
+                <span class="text-xs text-slate-400 block">Valid Until</span>
+                <span class="font-bold text-base">${new Date(p.expiryDate).toLocaleDateString()}</span>
+              </div>
+              <button onclick="openVisaModal('${esc(p.id)}')" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition">
+                Manage Renewal SLA
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('')).join('') + `</div>`;
+    }
+
+    function renderTax(container) {
+      document.getElementById('view-title').innerText = "Expatriate 183-Day Physical Presence & Tax Tracker";
+      container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">` + expats.map(e => {
+        const hostDays = hostDaysOf(e);
+        const pct = Math.min(100, Math.round((hostDays / 183) * 100));
+        const breached = hostDays >= 183;
+        return `
+          <div class="bg-slate-900 border ${breached ? 'border-rose-500/50' : 'border-slate-800'} p-6 rounded-xl flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-start">
+                <div>
+                  <h4 class="font-bold text-base">${esc(e.fullName)}</h4>
+                  <p class="text-xs text-slate-400">${esc(e.originCountry)} &rarr; ${esc(e.hostCountry)}</p>
+                </div>
+                <span class="text-xs font-bold px-2.5 py-1 rounded ${breached ? 'bg-rose-500/20 text-rose-400' : (hostDays >= 120 ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400')}">
+                  ${breached ? 'TAX RESIDENT' : (hostDays >= 120 ? 'APPROACHING' : 'NON-RESIDENT')}
+                </span>
+              </div>
+              <div class="mt-6 mb-2 flex justify-between text-xs">
+                <span class="text-slate-400">Physical Presence: <strong class="text-white">${hostDays} days</strong></span>
+                <span class="text-slate-400"> OECD Cap: <strong class="text-white">183 days</strong></span>
+              </div>
+              <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+                <div class="h-full ${breached ? 'bg-rose-500' : (hostDays >= 120 ? 'bg-amber-400' : 'bg-blue-500')}" style="width:${pct}%"></div>
+              </div>
+              <div class="mt-4 space-y-1">
+                <span class="text-[11px] text-slate-400 uppercase font-semibold">Recent Travel Logs</span>
+                ${e.travelRecords.map(t => `<div class="text-xs text-slate-300 flex justify-between bg-slate-800/50 px-2.5 py-1.5 rounded"><span>${esc(t.country)} (${esc(t.purpose || 'Stay')})</span><strong>${t.durationDays}d</strong></div>`).join('')}
+              </div>
+            </div>
+            <div class="mt-5 pt-4 border-t border-slate-800 text-xs ${breached ? 'text-rose-400' : 'text-slate-400'}">
+              ${breached ? '⚠️ Exceeded 183 days. Trigger host country shadow payroll withholding & tax equalization.' : `${183 - hostDays} safe days remaining before host tax residency triggers.`}
+            </div>
+          </div>
+        `;
+      }).join('') + `</div>`;
+    }
+
+    function renderExpenses(container) {
+      document.getElementById('view-title').innerText = "Moving Expense Allowance Management";
+      container.innerHTML = `<div class="space-y-6">` + expats.map(e => {
+        const cap = Number(e.budgetHousing) + Number(e.budgetFlights) + Number(e.budgetShipping) + Number(e.budgetSettling);
+        const spent = e.expenseClaims.filter(c => c.status === "APPROVED" || c.status === "REIMBURSED").reduce((a,b)=>a+Number(b.amountInUSD), 0);
+        return `
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800 pb-4 gap-3">
+              <div>
+                <h3 class="font-bold text-lg">${esc(e.fullName)} <span class="text-xs font-normal text-slate-400">(${esc(e.employeeId)})</span></h3>
+                <p class="text-xs text-slate-400">Relocation Allowance Pool &bull; ${esc(e.city)}, ${esc(e.hostCountry)}</p>
+              </div>
+              <div class="flex gap-6 text-right">
+                <div><span class="text-xs text-slate-400 block">Total Cap</span><span class="font-bold">$${cap.toLocaleString()}</span></div>
+                <div><span class="text-xs text-slate-400 block">Approved Spent</span><span class="font-bold text-blue-400">$${spent.toLocaleString()}</span></div>
+                <div><span class="text-xs text-slate-400 block">Remaining</span><span class="font-bold text-emerald-400">$${(cap - spent).toLocaleString()}</span></div>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="text-slate-400 uppercase border-b border-slate-800">
+                  <tr>
+                    <th class="py-2">Expense Item</th>
+                    <th class="py-2">Category</th>
+                    <th class="py-2">Vendor</th>
+                    <th class="py-2">Amount (USD)</th>
+                    <th class="py-2">Status</th>
+                    <th class="py-2 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60">
+                  ${e.expenseClaims.map(c => `
+                    <tr>
+                      <td class="py-2.5 font-medium text-slate-200">${esc(c.title)}</td>
+                      <td class="py-2.5 text-slate-400">${esc(c.category)}</td>
+                      <td class="py-2.5 text-slate-400">${esc(c.vendor)}</td>
+                      <td class="py-2.5 font-bold">$${Number(c.amountInUSD).toLocaleString()} <span class="text-slate-500 font-normal">(${esc(c.currency)})</span></td>
+                      <td class="py-2.5"><span class="px-2 py-0.5 rounded font-bold ${c.status === 'APPROVED' ? 'bg-emerald-500/15 text-emerald-400' : (c.status === 'REIMBURSED' ? 'bg-blue-500/15 text-blue-400' : 'bg-amber-500/15 text-amber-400')}">${esc(c.status)}</span></td>
+                      <td class="py-2.5 text-right space-x-1">
+                        ${c.status === 'PENDING' ? `<button onclick="updateExpenseStatus('${esc(c.id)}', 'APPROVED')" class="px-2 py-1 bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/40 rounded font-semibold">Approve</button>` : ''}
+                        ${c.status === 'APPROVED' ? `<button onclick="updateExpenseStatus('${esc(c.id)}', 'REIMBURSED')" class="px-2 py-1 bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 rounded font-semibold">Mark Reimbursed</button>` : ''}
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }).join('') + `</div>`;
+    }
+
+    function exportCSV() {
+      const rows = [["Employee ID", "Full Name", "Origin", "Host Country", "Permit Type", "Permit Status", "183d Host Days", "Total Allowance USD"]];
+      expats.forEach(e => {
+        const p = e.workPermits[0] || {};
+        const days = hostDaysOf(e);
+        const cap = Number(e.budgetHousing) + Number(e.budgetFlights) + Number(e.budgetShipping) + Number(e.budgetSettling);
+        rows.push([e.employeeId, e.fullName, e.originCountry, e.hostCountry, p.permitType || "N/A", p.status || "N/A", days, cap]);
+      });
+      const csv = rows.map(r => r.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "mobility_audit_report.csv";
+      a.click();
+    }
+
+    fetchData();
+  </script>
+</body>
+</html>

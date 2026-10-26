@@ -1,0 +1,81 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Expatriate {
+  id               String         @id @default(uuid())
+  employeeId       String         @unique
+  fullName         String
+  email            String         @unique
+  originCountry    String
+  hostCountry      String
+  city             String
+  department       String
+  jobTitle         String
+  status           String         @default("ACTIVE")
+  budgetHousing    Decimal        @default(0.0)
+  budgetFlights    Decimal        @default(0.0)
+  budgetShipping   Decimal        @default(0.0)
+  budgetSettling   Decimal        @default(0.0)
+  workPermits      WorkPermit[]
+  travelRecords    TravelLog[]
+  expenseClaims    ExpenseClaim[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model WorkPermit {
+  id               String     @id @default(uuid())
+  expatriateId     String
+  expatriate       Expatriate @relation(fields: [expatriateId], references: [id], onDelete: Cascade)
+  permitType       String
+  permitNumber     String     @unique
+  issuingCountry   String
+  issuedDate       DateTime
+  expiryDate       DateTime
+  status           String     @default("VALID")
+  cosAssigned      Boolean    @default(false)
+  medicalCompleted Boolean    @default(false)
+  biometricsDone   Boolean    @default(false)
+  submittedToGovt  Boolean    @default(false)
+  counselNotes     String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+}
+
+model TravelLog {
+  id           String     @id @default(uuid())
+  expatriateId String
+  expatriate   Expatriate @relation(fields: [expatriateId], references: [id], onDelete: Cascade)
+  country      String
+  entryDate    DateTime
+  exitDate     DateTime?
+  durationDays Int
+  taxYear      Int
+  purpose      String?
+  createdAt    DateTime   @default(now())
+}
+
+model ExpenseClaim {
+  id            String     @id @default(uuid())
+  expatriateId  String
+  expatriate    Expatriate @relation(fields: [expatriateId], references: [id], onDelete: Cascade)
+  title         String
+  category      String
+  amount        Decimal
+  currency      String     @default("USD")
+  amountInUSD   Decimal
+  vendor        String
+  receiptUrl    String?
+  status        String     @default("PENDING")
+  submittedDate DateTime   @default(now())
+  reviewedDate  DateTime?
+  reviewedBy    String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
